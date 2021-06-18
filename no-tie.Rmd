@@ -1,0 +1,139 @@
+---
+title: "Chess Game Simulation"
+author: "Alex Mangiapane and Sean Stuhlsatz"
+output: html_notebook
+---
+
+
+Here, we will simulate the results of chess games by first initializing the ratings of players, then simulating the outcomes through a function of the difference in player ratings.
+
+```{r}
+ratings <- as.vector(runif(10, min = 1400, max = 1600))
+ratings = sort(ratings)
+#This rating vector represents the true underlying ratings of players. However, we will assume each player starts with a provisional rating of 1500. 
+ratings[1]
+```
+
+Now we can define the probability function, which inputs two ratings and outputs the chance of player 1 winning.
+
+```{r}
+no_tie <- function(r1, r2){
+  prob <- (10^((r1-r2)/400))/(1+10^((r1-r2)/400))
+  return(prob)
+}
+```
+
+We test this function on several sample ratings:
+```{r}
+no_tie(1500,1400)
+no_tie(1400,1300)
+no_tie(2000,1000)
+```
+
+This is the initial logistic choice of probability function, but we would like to also use a function which allows for draws. We use the logistic function suggested by Glicko, which is only a slight deviation on the initial Bradley-Terry function. 
+```{r}
+#glicko_prob <- function(r1, r2, s){
+  #prob <- (10^((r1-r2)/400))^s/(1+10^((r1-r2)/400))
+  #return(prob)
+#}
+#s {0, 1/2, 1}
+```
+
+Again, we test several sample ratings:
+
+```{r}
+#glicko_prob(1500,1400,1)
+#glicko_prob(1500,1400,1/2)
+#glicko_prob(1500,1400,0)
+#Don't add to 1... How did we make sense of this?
+```
+
+Let's first try using the no_tie function to generate outcomes of games between random players: 
+
+```{r}
+rbinom(1, 1, no_tie(ratings[1], ratings[2]))
+```
+
+If this function returns a 0, that corresponds to the second player winning. If it returns a 1, that corresponds to the first player winning. This is randomly chosen as a Bernoulli trial with probability given by our no_tie function. 
+
+Below, we create a matrix displaying the probability of a victory in any given matchup.
+
+```{r}
+p_matrix_real <- matrix(, nrow = 10, ncol = 10)
+for(j in 1:10){
+   for(i in 1:10){
+        p_matrix_real[i,j] = no_tie(ratings[i], ratings[j])
+   }
+}
+
+```
+
+Now let us simulate the results of games where each player plays every other player, and store the results in a matrix.
+
+```{r}
+s_matrix <- matrix(, nrow = 10, ncol = 10)
+for(j in 1:10){
+   for(i in 1:j){
+        s_matrix[i,j] = 2*rbinom(1, 1, no_tie(ratings[i], ratings[j]))-1
+   }
+}
+for(j in 1:10){
+   for(i in j:10){
+        s_matrix[i,j] = -s_matrix[j,i]
+   }
+}
+for(j in 1:10){
+   for(i in j:j){
+        s_matrix[i,j] = 0
+   }
+}
+```
+
+In the s_matrix, we store a 1 in the (i, j) entry if player i beat player j, and a -1 if player i lost to player j. We fill in 0's along the diagonal for completeness. Next, we need to update the players provisional rating of 1500 with the Elo update algorithm, which compares probability of wins to the actual outcomes. We let K = 32 be a constant updating factor. 
+
+```{r}
+priors <- c(rep(1500, 10))
+sum = 0
+
+for(n in 1:10000){
+p_matrix <- matrix(, nrow = 10, ncol = 10)
+for(j in 1:10){
+   for(i in 1:10){
+        p_matrix[i,j] = no_tie(priors[i], priors[j])
+   }
+}
+s_matrix <- matrix(, nrow = 10, ncol = 10)
+for(j in 1:10){
+   for(i in 1:j){
+        s_matrix[i,j] = 2*rbinom(1, 1, no_tie(ratings[i], ratings[j]))-1
+   }
+}
+for(j in 1:10){
+   for(i in j:10){
+        s_matrix[i,j] = -s_matrix[j,i]
+   }
+}
+for(j in 1:10){
+   for(i in j:j){
+        s_matrix[i,j] = 0
+   }
+}
+#s_matrix[1,]
+#sum(s_matrix[1,])
+#Note that this value is the number is wins - losses. Since wins + losses = 9 games, we can sum these values and divide by two to get wins, and the rest are losses.
+posteriors <- c(rep(NULL, 10))
+for (i in 1:10){
+  posteriors[i] <- priors[i] + 32*((sum(s_matrix[i,])+9)/2 - sum(p_matrix[i,]) + 0.5)
+}
+priors = posteriors
+sum = sum + 1
+}
+
+```
+
+
+```{r}
+ratings
+posteriors
+```
+
