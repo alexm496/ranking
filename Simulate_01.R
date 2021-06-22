@@ -109,36 +109,59 @@ MatchAllPairs <- function(m,n=1,randomize=FALSE) {
   return(matchups)
 }
 
-
-# Schedules players based on skills. If closest=TRUE,
-# tries to schedule players with similar skills; o.w.
-# tries to schedule players with dissimilar skills.
+# Matches players by skill, matching similar players together if
+# closest==TRUE, dissimilar players otherwise.
 #
-# For games under competitive matchmaking, can use
-# current skill estimates for the skills argument
+# If param randomize is used, randomizes order within rounds.
 #
-# Scheduling is deterministic.
-MatchBySkill <- function(skills,closest=TRUE,n=1) {
+# Uses a chi-square distribution with df degrees of freedom to
+# introduce randomness. If df=0, matchmaking is deterministic.
+# Because of the way truncation is done, sufficiently high df
+# leads to almost-deterministic matchmaking with opposite
+# closest value.
+MatchBySkill <- function(skills,df=0,closest=TRUE,n=1,randomize=FALSE) {
   m <- length(skills)
   r <- ceiling(m/2)
   matchups <- data.frame("i"=c(),"j"=c())
-  for (k in 1:n) {
-    temp <- data.frame("i"=rep(0,r),
+  
+  for (l in 1:n) {
+    temp <- data.frame("i"=c(rep(0,r)),
                        "j"=rep(0,r))
     options <- 1:m
+    
     for (k in 1:floor(m/2)) {
-        temp$i[k] <- options[which.max(skills[options])]
-        options <- (1:m)[-c(temp$i,temp$j)]
-        if (closest) temp$j[k] <- options[which.max(skills[options])]
-        else temp$j[k] <- options[which.min(skills[options])]
-        options <- (1:m)[-c(temp$i[1:k],temp$j)]
+      #print(k)
+      temp$i[k] <- options[1]
+      options <- options[2:length(options)]
+      
+      #floor(rchisq(1,df))+1 is used rather than ceiling(rchisq(1,df))
+      #so that df=0 produces deterministic matchmaking
+      if (closest) temp$j[k] <- options[min(floor(rchisq(1,df))+1,
+                                            length(options))]
+      else temp$j[k] <- options[length(options)-min(floor(rchisq(1,df)),
+                                                    length(options)+1)]
+      #print(c(temp$i,temp$j))
+      options <- (1:m)[-c(temp$i,temp$j)]
     }
+    
     if (m %% 2 == 1) {
       temp$i[r] <- options[1]
-      temp$j[r] <- ceiling(runif(1,0,m))
+      temp$j[r] <- ((1:m)[-temp$i[r]])[max(m-1,
+                                           min(1,
+                                               floor(rnorm(1,
+                                                           temp$i[r],
+                                                           df))))]
     }
+    
+    temp$i <- order(skills)[temp$i]
+    temp$j <- order(skills)[temp$j]
+    
+    if (randomize) temp <- temp[sample(1:r,r),]
+    
     matchups <- rbind(matchups,temp)
+    
   }
+  
   matchups$t <- rep(1:n,each=r)
   return(matchups)
 }
