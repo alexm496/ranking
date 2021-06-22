@@ -40,7 +40,7 @@ GetTMProb <- function(skills, coeff=1,h=0) {
 # Function for computing "probabilities" by a step function
 GetStepProb <- function(skills,h=0) {
   skillMat <- matrix(rep(skills,length(skills)),nrow=length(skills),byrow=TRUE)
-  probMat <- (skillMat+h<t(skillMat)) + 0.5*(skillMat == t(skillMat))
+  probMat <- (skillMat<t(skillMat)+h) + 0.5*(skillMat == t(skillMat)+h)
   return(probMat)
 }
 
@@ -128,7 +128,6 @@ MatchBySkill <- function(skills,closest=TRUE,n=1) {
     options <- 1:m
     for (k in 1:floor(m/2)) {
         temp$i[k] <- options[which.max(skills[options])]
-        print("Past line 142")
         options <- (1:m)[-c(temp$i,temp$j)]
         if (closest) temp$j[k] <- options[which.max(skills[options])]
         else temp$j[k] <- options[which.min(skills[options])]
