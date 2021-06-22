@@ -17,38 +17,31 @@ library(tictoc)
 ###         probabilities       ###
 ###################################
 
-# Old method for computing Bradley-Terry probabilities.
-# Less vectorized (ergo probably less efficient) than
-# GetBTProb.
-GetBTProbScalar <- function(skills,coeff=1) {
-  n <- length(skills)
-  probMat <- matrix(0,n,n)
-  for(i in 1:n) {
-    for(j in 1:n) {
-      probMat[i,j] <- 1/(1+exp(-coeff*(skills[i]-skills[j]))) 
-    }
-  }
-  return(probMat)
-}
-
-# New method for computing Bradley-Terry probabilities.
+# Function for computing Bradley-Terry probabilities.
 #
 # To get Glickman's Bradley-Terry model, set coeff=ln10/400.
-GetBTProb <- function(skills, coeff=1) {
+GetBTProb <- function(skills, coeff=1,h=0) {
   n <- length(skills)
   skillMat <- matrix(rep(skills,n),nrow=n,byrow=TRUE)
-  probMat <- (1+exp(coeff*(skillMat-t(skillMat))))^(-1)
+  probMat <- (1+exp(coeff*(skillMat-t(skillMat)-h)))^(-1)
   return(probMat)
 }
 
 # Function for computing Thurstone-Mosteller probabilities.
-GetTMProb <- function(skills, coeff=1) {
+GetTMProb <- function(skills, coeff=1,h=0) {
   n <- length(skills)
   probMat <- matrix(0,n,n)
   for(j in 1:n) probMat[,j] <- pnorm(skills,
-                                     mean = skills[j],
+                                     mean = skills[j]-h,
                                      sd=1/coeff)
-  probMat
+  return(probMat)
+}
+
+# Function for computing "probabilities" by a step function
+GetStepProb <- function(skills,h=0) {
+  skillMat <- matrix(rep(skills,length(skills)),nrow=length(skills),byrow=TRUE)
+  probMat <- (skillMat+h<t(skillMat)) + 0.5*(skillMat == t(skillMat))
+  return(probMat)
 }
 
 
@@ -58,25 +51,29 @@ GetTMProb <- function(skills, coeff=1) {
 ####################################
 
 
-#Chooses a player for each game unif. at random, then
-#chooses another play for them to play against unif.
-#at random.
-MatchRandomly <- function(m,n=1000) {
-  matchups <- data.frame("i" = rep(0,n))
+# Chooses a player for each game unif. at random, then
+# chooses another play for them to play against unif.
+# at random.
+#
+# Param roundLength controls time, with each round of length
+# roundLength (except the last round, which may be shorter). 
+MatchRandomly <- function(m,n=1000,roundLength = 1) {
+  times <- rep(1:ceiling(n/roundLength),each=roundLength)
+  matchups <- data.frame("t" = times[1:n])
   matchups$i <- ceiling(runif(n,min=0,max=m))
   matchups$j <- ((matchups$i-1 + ceiling(runif(n,min=0,max=m-1))) %% m)+1
   return(matchups)
 }
 
 
-#Assigns players to matches an opponents randomly, but
-#each player plays exactly one game in the first m/2.
-#If m is odd, a randomly-selected player plays 2 games.
-#Param n is number of rounds, not number of games
+# Assigns players to matches an opponents randomly, but
+# each player plays exactly one game in the first m/2.
+# If m is odd, a randomly-selected player plays 2 games.
+# Param n is number of rounds, not number of games
 MatchAllPlayers <- function(m,n=1) {
   c <- ceiling(m/2)
   f <- floor(m/2)
-  matchups <- data.frame("i" = rep(0,c*n))
+  matchups <- data.frame("t" = rep(1:n,each=c))
   iTeams <- rep(0,c)
   jTeams <- rep(0,c)
   for(k in 0:(n-1)) {
@@ -108,34 +105,45 @@ MatchAllPairs <- function(m,n=1,randomize=FALSE) {
     if(randomize) matchups[(1+((k-1)*r)):(k*r),] <- 
         (matchups[(1+((k-1)*r)):(k*r),])[sample(1:r,r),]
   }
-  print(r)
+  matchups$t=rep(1:n,each=r)
   return(matchups)
 }
 
 
-# UNFINISHED
-#
 # Schedules players based on skills. If closest=TRUE,
 # tries to schedule players with similar skills; o.w.
 # tries to schedule players with dissimilar skills.
 #
 # For games under competitive matchmaking, can use
 # current skill estimates for the skills argument
-MatchBySkill <- function(skills,closest=TRUE,n) {
-  temp <- data.frame("i"=c(),
-                     "j"=c())
-  for(k in 1:n) {
-    temp <- data.frame("i"=c(),
-                       "j"=c())
-    while(length(temp$i) < floor(m/2)) {
-      options <- (1:m)[-c(temp$i,temp$j)]
-      temp$i[length(temp$i)+1] <- options[which.max(skills[options])]
-      options <- (1:m)[-c(temp$i,temp$j)]
-      temp$j[length(temp$j)+1] <- options[which.max(skills[options])]
+#
+# Scheduling is deterministic.
+MatchBySkill <- function(skills,closest=TRUE,n=1) {
+  m <- length(skills)
+  r <- ceiling(m/2)
+  matchups <- data.frame("i"=c(),"j"=c())
+  for (k in 1:n) {
+    temp <- data.frame("i"=rep(0,r),
+                       "j"=rep(0,r))
+    options <- 1:m
+    for (k in 1:floor(m/2)) {
+        temp$i[k] <- options[which.max(skills[options])]
+        print("Past line 142")
+        options <- (1:m)[-c(temp$i,temp$j)]
+        if (closest) temp$j[k] <- options[which.max(skills[options])]
+        else temp$j[k] <- options[which.min(skills[options])]
+        options <- (1:m)[-c(temp$i[1:k],temp$j)]
     }
-    #UNFINISHED
+    if (m %% 2 == 1) {
+      temp$i[r] <- options[1]
+      temp$j[r] <- ceiling(runif(1,0,m))
+    }
+    matchups <- rbind(matchups,temp)
   }
+  matchups$t <- rep(1:n,each=r)
+  return(matchups)
 }
+
 
 
 ####################################
@@ -177,73 +185,3 @@ MakeTournament <- function(prob,n) {
   #UNFINISHED
 }
 
-
-
-###################################
-###    Tests for functions      ###
-###################################
-
-skills <- runif(10,min=1500,max=2500)
-skills2 <- c(1,1,2,3,4,4,0)
-q=log(10)/400
-
-### Probability calculation tests
-
-# Confirm that the vectorized BTProb function produces the
-# same output as the non-vectorized one
-GetBTProb(skills,q)-GetBTProbScalar(skills,q)
-
-# Test functions
-GetTMProb(c(0,1,1.5,1.96))
-GetBTProb(c(0,1,1.5,1.96))
-
-GetTMProb(skills,q)
-
-
-### Scheduling tests
-MatchRandomly(10,20)
-MatchRandomly(5,12)
-MatchRandomly(4)
-
-MatchAllPlayers(6,5)
-MatchAllPlayers(5,3)
-MatchAllPlayers(10)
-
-MatchAllPairs(4,2)
-MatchAllPairs(4,2,randomize=TRUE)
-MatchAllPairs(5)
-
-
-### Game-making tests
-MakeGames(prob=GetBTProb(skills,q),
-          games = MatchRandomly(length(skills),25))
-
-MakeGames(prob=GetTMProb(skills,q),
-          games = MatchAllPairs(length(skills),1))
-MakeGames(prob=GetTMProb(skills,q),
-          games = MatchAllPairs(length(skills),1))
-
-games <- MakeGames(prob = GetBTProb(skills,q),
-                   games = MatchRandomly(length(skills),10000))
-sum(games$p*games$results)/sum(games$results)
-sum((1-games$p)*games$results)/sum(1-games$results)
-for(i in 0:19) {
-  print(mean(games$results[which((games$p>i*0.05) & (games$p < (i+1)*0.05))]))
-}
-
-MakeGames(GetBTProb(skills2),MatchRandomly(length(skills2),100))
-
-
-#Benchmarking Bradley-Terry prob functions
-x <- matrix(0,nrow=4000,ncol=4000)
-
-tic()
-x <- GetBTProb(1:4000,q)
-toc()
-
-tic()
-x <- GetBTProbScalar(1:4000,q)
-toc()
-
-#Mild difference observed. Can't be bothered to confirm
-#at this juncture through more rigorous benchmarking
