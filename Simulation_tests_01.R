@@ -13,6 +13,41 @@ GetBTProbScalar <- function(skills,coeff=1,h=0) {
   return(probMat)
 }
 
+# Deprecated -- replaced by MatchBySkill
+#
+# Schedules players based on skills. If closest=TRUE,
+# tries to schedule players with similar skills; o.w.
+# tries to schedule players with dissimilar skills.
+#
+# For games under competitive matchmaking, can use
+# current skill estimates for the skills argument
+#
+# Scheduling is deterministic.
+MatchBySkillDet <- function(skills,closest=TRUE,n=1) {
+  m <- length(skills)
+  r <- ceiling(m/2)
+  matchups <- data.frame("i"=c(),"j"=c())
+  for (k in 1:n) {
+    temp <- data.frame("i"=rep(0,r),
+                       "j"=rep(0,r))
+    options <- 1:m
+    for (k in 1:floor(m/2)) {
+      temp$i[k] <- options[which.max(skills[options])]
+      options <- (1:m)[-c(temp$i,temp$j)]
+      if (closest) temp$j[k] <- options[which.max(skills[options])]
+      else temp$j[k] <- options[which.min(skills[options])]
+      options <- (1:m)[-c(temp$i[1:k],temp$j)]
+    }
+    if (m %% 2 == 1) {
+      temp$i[r] <- options[1]
+      temp$j[r] <- ceiling(runif(1,0,m))
+    }
+    matchups <- rbind(matchups,temp)
+  }
+  matchups$t <- rep(1:n,each=r)
+  return(matchups)
+}
+
 
 ###################################
 ###    Tests for functions      ###
@@ -60,6 +95,29 @@ MatchAllPairs(5)
 
 MatchBySkill(c(1,6,2,5,3,4),n=2,closest=FALSE)
 MatchBySkill(c(1,6,2,5,3,4),n=2)
+MatchBySkill(c(1,6,2,5,3,4),n=4)
+MatchBySkill(c(1,6,2,5,3,4),n=4,df=1)
+MatchBySkill(c(1,6,2,5,3,4),n=4,df=1,randomize=TRUE)
+
+MatchBySkill(1:10)
+MatchBySkill(1:11)
+MatchBySkill(1:20,df=1)
+MatchBySkill(1:20,df=1.75)
+MatchBySkill(1:20,df=4)
+MatchBySkill(1:20,df=30)
+
+MatchBySkill(1:20,randomize = TRUE)
+MatchBySkill(1:21,randomize = TRUE)
+
+MatchBySkill(1:21,df=2)
+
+MatchBySkill(c(5,1,1,2,3,5,0))
+MatchBySkill(c(5,1,1,2,3,5,0),df=2)
+MatchBySkill(c(5,1,1,2,3,5,0),df=3)
+
+MatchBySkill(c(5,1,1,2,3,5,0),randomize=TRUE)
+
+MatchBySkill(c(5,1,1,2,3,5,0),closest=FALSE)
 
 ### Game-making tests
 MakeGames(prob=GetBTProb(skills,q),
@@ -79,6 +137,9 @@ for(i in 0:19) {
 }
 
 MakeGames(GetBTProb(skills2),MatchRandomly(length(skills2),100))
+
+MakeGlickmanGames(c(1,2,3,4),c(0,0,0,0),0,MatchAllPlayers(4,4))
+MakeGlickmanGames(c(1,2,3,4),c(0.25,0.25,0.25,0),0.125,MatchAllPlayers(4,4))
 
 
 #Benchmarking Bradley-Terry prob functions
