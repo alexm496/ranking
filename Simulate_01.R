@@ -199,11 +199,53 @@ MakeGames <- function(prob,games) {
   return(games)
 }
 
+
+# Simulates games according to the model described in Glickman, 2001,
+# Dynamic Paired-Comparison Models with Stochastic Variances.
+#
+# Returns a list containing a matrix of the skills over time (each round
+# is a column and each player is a row) and a dataframe of the games
+# 
+# To get Glickman's model, set skill=runif(m,0,omega) for some reasonable
+# omega, and pass q as the scaling parameter.
+MakeGlickmanGames <- function(skill,
+                              skillVar,
+                              tau,
+                              games,
+                              prob=GetBTProb,
+                              orderEffect=0,
+                              scaling=1,
+                              ...) {
+  m <- length(skill)
+  nRounds <- max(games$t)
+  skillMat <- NULL
+  games$results <- rep(NA,length(games$i))
+  print(games)
+  print("Entering for loop")
+  for(i in 1:nRounds) {
+    print(i)
+    skillMat <- cbind(skillMat,skill)
+    
+    temp <- MakeGames(prob(skill,h=orderEffect,coeff=scaling,...),
+                      games[which(games$t==i),])
+    games$results[which(games$t==i)] <- temp$results
+    
+    skillVar <- rlnorm(m,log(skillVar),tau)
+    skill <- rnorm(m,skill,skillVar)
+  }
+  
+  return(list(games,skillMat))
+}
+
+
 # Makes n tournaments between m players with matrix of
 # win-loss probabilities prob. Each tournament works as
 # follows: players are randomly assigned to games; the
 # winners of one round progress to the next.
-MakeTournament <- function(prob,n) {
-  #UNFINISHED
+MakeTournament <- function(prob,n=1,byTournament = TRUE) {
+  m <- length(prob[1,])
+  for (k in 1:n) {
+    
+  }
 }
 
