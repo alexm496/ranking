@@ -1,3 +1,6 @@
+###################################
+###    Deprecated functions     ###
+###################################
 
 # Old method for computing Bradley-Terry probabilities.
 # Less vectorized (ergo probably less efficient) than
@@ -48,11 +51,54 @@ MatchBySkillDet <- function(skills,closest=TRUE,n=1) {
   return(matchups)
 }
 
+OldMatchAllPlayers <- function(m,n=1) {
+  c <- ceiling(m/2)
+  f <- floor(m/2)
+  matchups <- data.frame("t" = rep(1:n,each=c))
+  iTeams <- rep(0,c)
+  jTeams <- rep(0,c)
+  for(k in 0:(n-1)) {
+    iTeams <- sample(1:m,c,replace=FALSE)
+    jTeams[1:f] <- sample((1:m)[-iTeams],f,replace=FALSE)
+    if(f<c) jTeams[c] <- sample((1:m)[-iTeams[c]],1,replace=FALSE)
+    matchups$i[(k*c+1):(k*c+c)] <- iTeams
+    matchups$j[(k*c+1):(k*c+c)] <- jTeams
+  }
+  return(matchups)
+}
+
+
+###########################################
+###    Functions for running tests      ###
+###########################################
+TestSchedulingFunction <- function(FUN,
+                                   mGrid=2:100,
+                                   nGrid=1:15,
+                                   times=50,
+                                   ...) {
+  for (i in mGrid) for (j in nGrid) for (k in times) {
+    temp <- FUN(m=i,n=j,...)
+    if (sum(temp$i == temp$j) != 0) {
+      print(temp)
+      return(FALSE)
+    }
+    if (sum(temp$i > i)+sum(temp$i<1) != 0) {
+      print(temp)
+      return(FALSE)
+    }
+    if (sum(temp$j > i)+sum(temp$j<1) != 0) {
+      print(temp)
+      return(FALSE)
+    }
+  }
+  return(TRUE)
+}
+TestSchedulingFunction(OldMatchAllPlayers)
+
 
 ###################################
 ###    Tests for functions      ###
 ###################################
-
 skills <- runif(10,min=1500,max=2500)
 skills2 <- c(1,1,2,3,4,4,0)
 q=log(10)/400
@@ -79,19 +125,28 @@ GetStepProb(c(0,1,2,3,4,0))
 GetStepProb(c(0,1,2,3,4,0),h=1)
 
 ### Scheduling tests
+
+  
 MatchRandomly(10,20)
 MatchRandomly(10,20,roundLength = 2)
 MatchRandomly(7,20,roundLength=3)
 MatchRandomly(5,12)
 MatchRandomly(4)
+TestSchedulingFunction(MatchRandomly,nGrid=1:1000)
 
 MatchAllPlayers(6,5)
 MatchAllPlayers(5,3)
 MatchAllPlayers(10)
+TestSchedulingFunction(MatchAllPlayers)
+
+for(i in 1:10) print(MatchAllPlayers(2))
+MatchAllPlayers(2,50)
+
 
 MatchAllPairs(4,2)
 MatchAllPairs(4,2,randomize=TRUE)
 MatchAllPairs(5)
+TestSchedulingFunction(MatchAllPairs)
 
 MatchBySkill(c(1,6,2,5,3,4),n=2,closest=FALSE)
 MatchBySkill(c(1,6,2,5,3,4),n=2)
@@ -119,6 +174,7 @@ MatchBySkill(c(5,1,1,2,3,5,0),randomize=TRUE)
 
 MatchBySkill(c(5,1,1,2,3,5,0),closest=FALSE)
 
+
 ### Game-making tests
 MakeGames(prob=GetBTProb(skills,q),
           games = MatchRandomly(length(skills),25))
@@ -140,6 +196,14 @@ MakeGames(GetBTProb(skills2),MatchRandomly(length(skills2),100))
 
 MakeGlickmanGames(c(1,2,3,4),c(0,0,0,0),0,MatchAllPlayers(4,4))
 MakeGlickmanGames(c(1,2,3,4),c(0.25,0.25,0.25,0),0.125,MatchAllPlayers(4,4))
+
+
+MakeTournament(GetBTProb(c(0,100,200,300,400,500,600)))
+MakeTournament(GetBTProb(c(0,0,50,100,200,300,400,500,600,600)))
+
+MakeTournament(GetBTProb(c(0,100,200,300,400,500,600)),byTournament = FALSE,n=3)
+
+MakeTournament(GetBTProb(c(0,100,200,300,400,500,600)),byTournament = TRUE,n=3)
 
 
 #Benchmarking Bradley-Terry prob functions
