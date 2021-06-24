@@ -78,7 +78,7 @@ MatchAllPlayers <- function(m,n=1) {
   jTeams <- rep(0,c)
   for(k in 0:(n-1)) {
     iTeams <- sample(1:m,c,replace=FALSE)
-    jTeams[1:f] <- sample((1:m)[-iTeams],f,replace=FALSE)
+    jTeams[1:f] <- ((1:m)[-iTeams])[sample(1:f,f,replace=FALSE)]
     if(f<c) jTeams[c] <- sample((1:m)[-iTeams[c]],1,replace=FALSE)
     matchups$i[(k*c+1):(k*c+c)] <- iTeams
     matchups$j[(k*c+1):(k*c+c)] <- jTeams
@@ -242,10 +242,37 @@ MakeGlickmanGames <- function(skill,
 # win-loss probabilities prob. Each tournament works as
 # follows: players are randomly assigned to games; the
 # winners of one round progress to the next.
-MakeTournament <- function(prob,n=1,byTournament = TRUE) {
-  m <- length(prob[1,])
+# 
+# Be aware: currently no attempt is made to control which player is
+# allowed to skip a round when the number of players is odd,
+# meaning that by chance a player could skip every round except
+# the final one (though with many players this is of course unlikely).
+MakeTournament <- function(prob,n=1,byTournament = FALSE) {
+  mTotal <- length(prob[1,])
+  games <- NULL
+  count <- 1
+  
   for (k in 1:n) {
+    players <- 1:mTotal
     
+    while(length(players)>1) {
+      m <- length(players)
+      temp <- MakeGames(prob[players,players],
+                        MatchAllPlayers(m,1)[1:floor(m/2),])
+      tempPlayers <- players[-c(temp$results*temp$j,
+                                (1-temp$results)*temp$i)]
+      temp$i <- players[temp$i]
+      temp$j <- players[temp$j]
+      temp$t <- count
+
+      players <- tempPlayers
+      games<- rbind(games,temp)
+      
+      if (!byTournament) count <- count+1
+    }
+    
+    if (byTournament) count <- count+1
   }
+  return(games)
 }
 
