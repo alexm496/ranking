@@ -1,17 +1,18 @@
 ---
-title: "R Notebook"
+  title: "R Notebook"
 author: "Alex Mangiapane and Sean Stuhlsatz"
 output: html_notebook
 ---
-
-This notebook will be dedicated to an analysis of various ranking system methods on lichess.org data. First, we import the dataset:
-
+  
+  This notebook will be dedicated to an analysis of various ranking system methods on lichess.org data. First, we import the dataset:
+  
+  
 ```{r}
 lichess <- read.csv("games.csv")
 ```
 
 Let us do some preliminary analysis of this data:
-
+  
 ```{r}
 summary(lichess)
 head(lichess)
@@ -50,43 +51,43 @@ ordered_lichess <- rated_lichess[order(rated_lichess$created_at),]
 ```
 
 With the data sorted, we can now apply our ranking system methods to the dataset and compare their performance in predicting outcomes. We start with TrueSkill, where we experiment with various values for $\epsilon$ to see which performs best. First, let us import the TrueSkill update function:
-
-```{r}
+  
+  ```{r}
 vfuncdraw <- function(a, b){
-   return((dnorm(-a-b)-dnorm(a-b))/(pnorm(a-b)-pnorm(-a-b)))
+  return((dnorm(-a-b)-dnorm(a-b))/(pnorm(a-b)-pnorm(-a-b)))
 }
 vfunc <- function(a, b){
-   return(dnorm(a-b)/pnorm(a-b))
+  return(dnorm(a-b)/pnorm(a-b))
 }
 wfuncdraw <- function(a, b){
-   return((vfuncdraw(a, b))^2 + ((a-b)*(dnorm(a-b)) + (a+b)*(dnorm(a+b)))/(pnorm(a-b)-pnorm(-a-b)))
+  return((vfuncdraw(a, b))^2 + ((a-b)*(dnorm(a-b)) + (a+b)*(dnorm(a+b)))/(pnorm(a-b)-pnorm(-a-b)))
 }
 wfunc <- function(a, b){
-   return(vfunc(a, b)*(vfunc(a, b) + a - b))
+  return(vfunc(a, b)*(vfunc(a, b) + a - b))
 }
 RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
-   for(n in 1:nrow(games)){
-      c = sqrt(2*beta^2 + p_data[games[n, 1], 2]^2 + p_data[games[n, 2], 2]^2)
-      
-      if(p_data[n, 3] == 0.5){
-         p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfuncdraw(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
+  for(n in 1:nrow(games)){
+    c = sqrt(2*beta^2 + p_data[games[n, 1], 2]^2 + p_data[games[n, 2], 2]^2)
+    
+    if(p_data[n, 3] == 0.5){
+      p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfuncdraw(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
       p_data[games[n, 2], 1] = p_data[games[n, 2], 1] - ((p_data[games[n, 2], 2]^2)/c)*vfuncdraw(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
       p_data[games[n, 1], 2] = p_data[games[n, 1], 2]*(1-(((p_data[games[n, 1], 2])^2)/(c^2))*wfuncdraw((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfuncdraw((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
-      }else{
-           p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfunc(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
+    }else{
+      p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfunc(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
       p_data[games[n, 2], 1] = p_data[games[n, 2], 1] - ((p_data[games[n, 2], 2]^2)/c)*vfunc(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
       p_data[games[n, 1], 2] = p_data[games[n, 1], 2]*(1-(((p_data[games[n, 1], 2])^2)/(c^2))*wfunc((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfunc((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
-      }
-   }
-   return(p_data)
+    }
+  }
+  return(p_data)
 }
 ```
 
@@ -101,11 +102,11 @@ variances <- c()
 
 #Now we loop through games; any time we encounter a new user, we assign them a rating of 1500 and variance of 300. If they then play multiple games, we update these parameters with the trueskill update.
 
-for(n in nrow(ordered_lichess)){
+for(n in 1:nrow(ordered_lichess)){
   if(ordered_lichess$white_id[n] %in% usernames == FALSE){
-    append(usernames, ordered_lichess$white_id[n])
-    append(ratings, 1500)
-    append(variances, 300)
+    usernames <- append(usernames, ordered_lichess$white_id[n])
+    ratings <- append(ratings, 1500)
+    variances <- append(variances, 300)
   }else{
   }
 }
