@@ -69,15 +69,16 @@ wfunc <- function(a, b){
 RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
    for(n in 1:nrow(games)){
      
-p1 = 1-pnorm(eps, rating_means[games[n, 1]]-rating_means[games[n, 2]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+p1 = 1-pnorm(eps, player_data[game_data[n, 1], 1]-player_data[game_data[n, 2], 1], player_data[game_data[n, 1], 2]+player_data[game_data[n, 2], 2])
    #player 2 wins probability
-p2 = 1-pnorm(eps, rating_means[games[n, 2]]-rating_means[games[n, 1]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+p2 = 1-pnorm(eps, -player_data[game_data[n, 1], 1]+player_data[game_data[n, 2], 1], player_data[game_data[n, 1], 2]+player_data[game_data[n, 2], 2])
    #draw probability
 p3 = max(1 - p1 - p2, 0)
      
       c = sqrt(2*beta^2 + p_data[games[n, 1], 2]^2 + p_data[games[n, 2], 2]^2)
       
       if(games[n, 3] == 0.5){
+        #Check this part
          p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfuncdraw(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
       p_data[games[n, 2], 1] = p_data[games[n, 2], 1] - ((p_data[games[n, 2], 2]^2)/c)*vfuncdraw(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
@@ -87,7 +88,8 @@ p3 = max(1 - p1 - p2, 0)
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfuncdraw((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       psum = psum + log(p3)
-      print(psum)
+      print(p3)
+      #print(psum)
       }else{
            p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfunc(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
@@ -98,7 +100,8 @@ p3 = max(1 - p1 - p2, 0)
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfunc((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       psum = psum + log(p1)
-      print(psum)
+      #print(psum)
+      print(p1)
       }
    }
     #print(psum)
@@ -185,14 +188,4 @@ Let us try this same calculation with a different value of epsilon:
 final_ratings_100 <- RateTrueskill(game_data, player_data, 100, 300)
 ```
 
-We can track the efficacy of these two different models with a simple probability calculation, which we compute as RateTrueskill is running.
-
-```{r}
-eps = 
-p1 = 1-pnorm(eps, rating_means[games[n, 1]]-rating_means[games[n, 2]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
-   #player 2 wins probability
-p2 = 1-pnorm(eps, rating_means[games[n, 2]]-rating_means[games[n, 1]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
-   #draw probability
-p3 = max(1 - p1 - p2, 0)
-```
 
