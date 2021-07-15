@@ -53,6 +53,7 @@ ordered_lichess <- rated_lichess[order(rated_lichess$created_at),]
 With the data sorted, we can now apply our ranking system methods to the dataset and compare their performance in predicting outcomes. We start with TrueSkill, where we experiment with various values for $\epsilon$ to see which performs best. First, let us import the TrueSkill update function:
 
 ```{r}
+psum = 0
 vfuncdraw <- function(a, b){
    return((dnorm(-a-b)-dnorm(a-b))/(pnorm(a-b)-pnorm(-a-b)))
 }
@@ -67,6 +68,13 @@ wfunc <- function(a, b){
 }
 RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
    for(n in 1:nrow(games)){
+     
+p1 = 1-pnorm(eps, rating_means[games[n, 1]]-rating_means[games[n, 2]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+   #player 2 wins probability
+p2 = 1-pnorm(eps, rating_means[games[n, 2]]-rating_means[games[n, 1]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+   #draw probability
+p3 = max(1 - p1 - p2, 0)
+     
       c = sqrt(2*beta^2 + p_data[games[n, 1], 2]^2 + p_data[games[n, 2], 2]^2)
       
       if(games[n, 3] == 0.5){
@@ -77,6 +85,9 @@ RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
       p_data[games[n, 1], 2] = p_data[games[n, 1], 2]*(1-(((p_data[games[n, 1], 2])^2)/(c^2))*wfuncdraw((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfuncdraw((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
+      
+      psum = psum + log(p3)
+      print(psum)
       }else{
            p_data[games[n, 1], 1] = p_data[games[n, 1], 1] + ((p_data[games[n, 1], 2]^2)/c)*vfunc(((p_data[games[n, 1], 1]) - (p_data[games[n, 2], 1]))/c, eps/c)
       
@@ -85,8 +96,12 @@ RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
       p_data[games[n, 1], 2] = p_data[games[n, 1], 2]*(1-(((p_data[games[n, 1], 2])^2)/(c^2))*wfunc((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
       
       p_data[games[n, 2], 2] = p_data[games[n, 2], 2]*(1-(((p_data[games[n, 2], 2])^2)/(c^2))*wfunc((p_data[games[n, 1], 1] - p_data[games[n, 2], 1])/c, eps/c))
+      
+      psum = psum + log(p1)
+      print(psum)
       }
    }
+    #print(psum)
    return(p_data)
 }
 ```
@@ -159,6 +174,25 @@ for(i in 1:nrow(game_data)){
 
 Now, the data is in the correct form, so we can apply the RateTrueskill function. 
 ```{r}
-final_ratings <- RateTrueskill(game_data, player_data, 0, 300)
+final_ratings_zero <- RateTrueskill(game_data, player_data, 0, 300)
+```
+
+#Why are some of the ratings saying NaN? Is there a problem when there is a draw? Check on this...
+
+Let us try this same calculation with a different value of epsilon:
+
+```{r}
+final_ratings_100 <- RateTrueskill(game_data, player_data, 100, 300)
+```
+
+We can track the efficacy of these two different models with a simple probability calculation, which we compute as RateTrueskill is running.
+
+```{r}
+eps = 
+p1 = 1-pnorm(eps, rating_means[games[n, 1]]-rating_means[games[n, 2]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+   #player 2 wins probability
+p2 = 1-pnorm(eps, rating_means[games[n, 2]]-rating_means[games[n, 1]], rating_vars[games[n, 1]]+rating_vars[games[n, 2]])
+   #draw probability
+p3 = max(1 - p1 - p2, 0)
 ```
 
