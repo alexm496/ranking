@@ -69,9 +69,9 @@ wfunc <- function(a, b){
 RateTrueskill <- function(games, p_data, eps = 0, beta = 300){
    for(n in 1:nrow(games)){
      
-p1 = 1-pnorm(eps, player_data[game_data[n, 1], 1]-player_data[game_data[n, 2], 1], player_data[game_data[n, 1], 2]+player_data[game_data[n, 2], 2])
+p1 = 1-pnorm(eps, p_data[games[n, 1], 1]-p_data[games[n, 2], 1], p_data[games[n, 1], 2]+p_data[games[n, 2], 2])
    #player 2 wins probability
-p2 = 1-pnorm(eps, -player_data[game_data[n, 1], 1]+player_data[game_data[n, 2], 1], player_data[game_data[n, 1], 2]+player_data[game_data[n, 2], 2])
+p2 = 1-pnorm(eps, -p_data[games[n, 1], 1]+p_data[games[n, 2], 1], p_data[games[n, 1], 2]+p_data[games[n, 2], 2])
    #draw probability
 p3 = max(1 - p1 - p2, 0)
      
@@ -185,7 +185,7 @@ final_ratings_zero <- RateTrueskill(game_data, player_data, 0, 300)
 Let us try this same calculation with a different value of epsilon:
 
 ```{r}
-final_ratings_100 <- RateTrueskill(game_data, player_data, 100, 300)
+final_ratings_5 <- RateTrueskill(game_data, player_data, 5, 300)
 ```
 
 
