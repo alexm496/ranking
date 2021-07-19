@@ -1,3 +1,16 @@
+#' Elo rating function.
+#' 
+#' @param games Dataframe containing games (1 row each) with
+#' columns for players i and j and a column for the results
+#' @param prob Function to compute the probabilities.
+#' @param init Initial ratings
+#' @param k Learning rate
+#' @param coeff Coefficient. Passed to prob.
+#' @param decay k coefficient decays with time by a factor
+#' of t^decay
+#' 
+#' @return Matrix, with each row containing ratings as of a
+#' given game.
 RateElo <- function(games,prob,init,k,coeff,decay=0) {
   skills <- init
   skillMat <- matrix(skills,nrow=1,byrow = TRUE)
