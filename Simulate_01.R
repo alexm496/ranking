@@ -1,4 +1,7 @@
 library(tictoc)
+library(tidyverse)
+library(showtext)
+library(showtextdb)
 
 # This .R file is laid out as follows: the first set of 
 # functions take in a vector of skills and output a matrix
@@ -208,6 +211,9 @@ MakeGames <- function(prob,games) {
 # 
 # To get Glickman's model, set skill=runif(m,0,omega) for some reasonable
 # omega, and pass q as the scaling parameter.
+# 
+# To get Glickman's model from the 1995 paper, set skillVar to
+# be nu-squared repeated m times and tau to be zero.
 MakeGlickmanGames <- function(skill,
                               skillVar,
                               tau,
@@ -220,19 +226,24 @@ MakeGlickmanGames <- function(skill,
   nRounds <- max(games$t)
   skillMat <- NULL
   games$results <- rep(NA,length(games$i))
-  print(games)
-  print("Entering for loop")
+  #print(games)
+  #print("Entering for loop")
   for(i in 1:nRounds) {
-    print(i)
-    skillMat <- cbind(skillMat,skill)
+    #print(i)
+    skillMat <- rbind(skillMat,
+                      matrix(rep(skill,sum(games$t==i)),
+                             ncol=length(skill),
+                             byrow=TRUE))
     
     temp <- MakeGames(prob(skill,h=orderEffect,coeff=scaling,...),
                       games[which(games$t==i),])
     games$results[which(games$t==i)] <- temp$results
     
     skillVar <- rlnorm(m,log(skillVar),tau)
-    skill <- rnorm(m,skill,skillVar)
+    skill <- rnorm(m,skill,sqrt(skillVar))
   }
+  
+  skillMat <- rbind(skillMat,skillMat[length(skillMat[,1]),])
   
   return(list(games,skillMat))
 }
