@@ -1,4 +1,12 @@
-RateTMExact <- function(games,priorMeans,priorVar,beta2) {
+#' RateTMExact function. Computes exact Thurstone-Mosteller updates
+#' 
+#' @param games Dataframe containing one row for each game
+#' @param priorMeans
+#' @param priorVar
+#' @param beta2 When players i & j play, i's win probability is 
+#' assumed to be the cdf of the normal RV w/ mean 0 and variance
+#' beta2 evaluated at the difference in skills
+RateTMExact <- function(games,priorMeans,priorVar,beta2,nu=0) {
   n <- length(games$i)
   
   skillMat <- matrix(rep(priorMeans,n+1),nrow=n+1,byrow = TRUE)
@@ -20,6 +28,10 @@ RateTMExact <- function(games,priorMeans,priorVar,beta2) {
     
     skillMat[l+1,] <- skillMat[l,]
     varMat[l+1,] <- varMat[l,]
+    
+    if (l>1) {
+      if (games$t[l-1]<games$t[l]) varMat[l+1,] <- varMat[l+1,]+nu^2
+    }
     
     skillMat[l+1,winner] <- skillMat[l,winner]+(varMat[l,winner]*phi)/(sigmaT*Phi)
     skillMat[l+1,loser] <- skillMat[l,loser]-(varMat[l,loser]*phi)/(sigmaT*Phi)
