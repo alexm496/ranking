@@ -1,3 +1,5 @@
+library(tictoc)
+
 ###################################
 ###    Deprecated functions     ###
 ###################################
@@ -106,8 +108,21 @@ q=log(10)/400
 ### Probability calculation tests
 
 # Confirm that the vectorized BTProb function produces the
-# same output as the non-vectorized one
-GetBTProb(skills,q)-GetBTProbScalar(skills,q)
+# same output as the non-vectorized ones
+if (sum(GetBTProb(skills,q)-GetBTProbScalar(skills,q))!=0){
+  stop("GetBTProb and GetBTProbScalar disagreed.")
+}
+probMat <- GetBTProb(skills,q)
+for(i in 1:length(skills)) for (j in 1:length(skills)) {
+  if (probMat[i,j] != GetBTProbSingle(skills[i],skills[j],q)) {
+    stop(paste("The functions disagree on ",
+               skills[i],
+               skills[j], " elements ",
+               i, " and ", j," yielding ",
+               probMat[i,j], " and ",
+               GetBTProbSingle(skills[i],skills[j],coeff=q)))
+  }
+}
 
 # Test functions
 GetTMProb(c(0,1,1.5,1.96))
@@ -123,6 +138,9 @@ GetTMProb(skills,q,h=1000)
 
 GetStepProb(c(0,1,2,3,4,0))
 GetStepProb(c(0,1,2,3,4,0),h=1)
+
+GetBTProbSingle(0,2)
+1-GetBTProbSingle(2,0)
 
 ### Scheduling tests
 
