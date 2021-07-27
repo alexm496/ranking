@@ -6,12 +6,17 @@
 #' @param beta2 When players i & j play, i's win probability is 
 #' assumed to be the cdf of the normal RV w/ mean 0 and variance
 #' beta2 evaluated at the difference in skills
+#' @param nu Dynamics factor. At the beginning of each time period
+#' (except the first), the function increases the variances by
+#' nu^2
+#' 
+#' @note Currently cannot handle draws.
 RateTMExact <- function(games,priorMeans,priorVar,beta2,nu=0) {
   n <- length(games$i)
   
   skillMat <- matrix(rep(priorMeans,n+1),nrow=n+1,byrow = TRUE)
   varMat <- matrix(rep(priorVar,n+1),nrow=n+1,byrow=TRUE)
-
+  
   for (l in 1:length(games[,1])) {
     if (games$results[l] == 1)  {
       winner <- games$i[l]
