@@ -1,13 +1,3 @@
-#' g function. Defined as in Glickman 1995
-g <- function(sigmaSquare,q) {
-  return(1/sqrt(1+(3*sigmaSquare*q^2)/(pi^2)))
-}
-
-#' E function. Defined as in Glickman 1995
-E <- function(mu,mu_j,sigmaSquare,q) {
-  return((1+exp(-q*g(sigmaSquare,q)*(mu-mu_j)))^(-1))
-}
-
 #' RateGlicko function. 
 #' @param games Dataframe containing games, with columns for 
 #' player i, player j, and result
@@ -74,3 +64,14 @@ RateGlicko <- function(games,priorMeans,priorVar,nu=0,q) {
     
   return(list(skillMat,varMat))
 }
+
+#' g function. Defined as in Glickman 1995
+g <- function(sigmaSquare,q) {
+  return(1/sqrt(1+(3*sigmaSquare*q^2)/(pi^2)))
+}
+
+#' E function. Defined as in Glickman 1995
+E <- function(mu,mu_j,sigmaSquare,q) {
+  return((1+exp(-q*g(sigmaSquare,q)*(mu-mu_j)))^(-1))
+}
+
